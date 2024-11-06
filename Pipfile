@@ -5,9 +5,13 @@ name = "pypi"
 
 [packages]
 pandas = "*"
+polars = "*"
+altair = "*"
 tqdm = "*"
 kaggle = "*"
 beartype = "*"
+jupyter = "*"
+matplotlib = "*"
 
 [dev-packages]
 exceptiongroup = "*"
