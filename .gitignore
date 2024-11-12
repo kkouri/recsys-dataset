@@ -29,3 +29,6 @@ data
 
 # PyCharm project settings
 .idea
+
+# Generated matrices
+matrices/*.csv
