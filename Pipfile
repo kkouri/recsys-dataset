@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 pandas = "*"
 polars = "*"
-altair = "*"
 tqdm = "*"
 kaggle = "*"
 beartype = "*"
