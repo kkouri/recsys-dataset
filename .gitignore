@@ -33,3 +33,5 @@ data
 # Generated matrices
 matrices/*.csv
 matrices/clicks/*.csv
+model/out/*.csv
+
