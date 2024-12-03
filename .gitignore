@@ -34,4 +34,4 @@ data
 matrices/*.csv
 matrices/clicks/*.csv
 model/out/*.csv
-
+model/*/*.csv
