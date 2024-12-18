@@ -100,17 +100,58 @@ def recall_by_event_type(evalutated_events: dict, total_number_events: dict):
 
 
 @beartype
-def weighted_recalls(recalls: dict, weights: dict):
+def weighted_scores(scores: dict, weights: dict):
     result = 0.0
-    for event, recall in recalls.items():
-        result += recall * weights[event]
+    for event, score in scores.items():
+        if score is not None:
+            result += score * weights[event]
     return result
+
+
+@beartype
+def mrr_by_event_type(predictions: dict, labels: dict, k: int):
+    clicks_ranks = []
+    carts_ranks = []
+    orders_ranks = []
+
+    for session in predictions.keys():
+        session_predictions = predictions[session]
+
+        if 'clicks' in session_predictions and 'clicks' in labels[session] and labels[session]['clicks']:
+            reciprocal_rank = 0
+            for i, itemid in enumerate(session_predictions['clicks'][:k], start=1):
+                if itemid == labels[session]['clicks']:
+                    reciprocal_rank = 1 / i
+                    break
+            clicks_ranks.append(reciprocal_rank)
+
+        if 'carts' in session_predictions and 'carts' in labels[session] and labels[session]['carts']:
+            reciprocal_rank = 0
+            for i, itemid in enumerate(session_predictions['carts'][:k], start=1):
+                if itemid in labels[session]['carts']:
+                    reciprocal_rank = 1 / i
+                    break
+            carts_ranks.append(reciprocal_rank)
+
+        if 'orders' in session_predictions and 'orders' in labels[session] and labels[session]['orders']:
+            reciprocal_rank = 0
+            for i, itemid in enumerate(session_predictions['orders'][:k], start=1):
+                if itemid in labels[session]['orders']:
+                    reciprocal_rank = 1 / i
+                    break
+            orders_ranks.append(reciprocal_rank)
+
+    return {
+        'clicks': sum(clicks_ranks) / len(clicks_ranks) if clicks_ranks else 0.0,
+        'carts': sum(carts_ranks) / len(carts_ranks) if carts_ranks else 0.0,
+        'orders': sum(orders_ranks) / len(orders_ranks) if orders_ranks else 0.0
+    }
 
 
 @beartype
 def get_scores(labels: dict[int, dict],
                predictions: dict[int, dict],
-               k=20,
+               k,
                weights={
                    'clicks': 0.10,
                    'carts': 0.30,
@@ -125,16 +166,20 @@ def get_scores(labels: dict[int, dict],
         weights: weights for the different event types
     Returns:
         recalls for each event type and the weighted recall
+        mrrs for each event type and the weighted mrr
     '''
+
     total_number_events = num_events(labels, k)
     evaluated_events = evaluate_sessions(labels, predictions, k)
     recalls = recall_by_event_type(evaluated_events, total_number_events)
-    recalls["total"] = weighted_recalls(recalls, weights)
-    return recalls
+    recalls["total"] = weighted_scores(recalls, weights)
+    mrrs = mrr_by_event_type(predictions, labels, k)
+    mrrs["total"] = weighted_scores(mrrs, weights)
+    return recalls, mrrs
 
 
 @beartype
-def main(labels_path: Path, predictions_path: Path):
+def main(labels_path: Path, predictions_path: Path, k: int):
     with open(labels_path, "r") as f:
         logging.info(f"Reading labels from {labels_path}")
         labels = f.readlines()
@@ -146,8 +191,9 @@ def main(labels_path: Path, predictions_path: Path):
         predictions = prepare_predictions(predictions)
         logging.info(f"Read {len(predictions)} predictions")
     logging.info("Calculating scores")
-    scores = get_scores(labels, predictions)
-    logging.info(f"Scores: {scores}")
+    recalls, mrrs = get_scores(labels, predictions, k)
+    logging.info(f"Recall@{k} scores: {recalls}")
+    logging.info(f"MRR@{k} scores: {mrrs}")
 
 
 if __name__ == "__main__":
@@ -155,5 +201,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--test-labels', default="resources/test_labels.jsonl", type=str)
     parser.add_argument('--predictions', default="resources/predictions.csv", type=str)
+    parser.add_argument('--k', default=20, type=int)
     args = parser.parse_args()
-    main(Path(args.test_labels), Path(args.predictions))
+    main(Path(args.test_labels), Path(args.predictions), args.k)
