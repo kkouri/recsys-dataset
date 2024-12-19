@@ -114,7 +114,7 @@ def mrr_by_event_type(predictions: dict, labels: dict, k: int):
     carts_ranks = []
     orders_ranks = []
 
-    for session in predictions.keys():
+    for session in list(predictions.keys()):
         session_predictions = predictions[session]
 
         if 'clicks' in session_predictions and 'clicks' in labels[session] and labels[session]['clicks']:
